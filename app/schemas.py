@@ -21,3 +21,16 @@ class FixIn(BaseModel):
     y: float
     uncertaintyMeters: float
     recordedAt: datetime
+
+
+class FixOut(BaseModel):
+    # Read-side shape for the web map (GET /fixes/recent). camelCase to match
+    # the rest of the API (and the frontend's Fix type) rather than the ORM's
+    # snake_case columns, which are mapped over in the endpoint.
+    id: int
+    observerID: str
+    x: float
+    y: float
+    uncertaintyMeters: float
+    recordedAt: datetime
+    receivedAt: datetime

@@ -69,6 +69,32 @@ seen in this area recently") — `/sightings` alone doesn't carry a computed pos
 }
 ```
 
+### `GET /fixes/recent`
+
+Read side for the web map — the most recent fixes, newest first.
+
+```
+GET /fixes/recent?limit=200   # limit 1..1000, default 200
+```
+
+```json
+[
+  {
+    "id": 42,
+    "observerID": "B7E2F910",
+    "x": 1.84,
+    "y": -0.62,
+    "uncertaintyMeters": 0.31,
+    "recordedAt": "2026-01-01T12:00:00Z",
+    "receivedAt": "2026-01-01T12:00:00.040Z"
+  }
+]
+```
+
+The `front/` web app polls this and groups rows by `observerID` into per-device
+tracks (newest row = current dot, the rest = a trail). CORS is open by default
+for local dev — set `CORS_ORIGINS` to the real frontend origin in production.
+
 ### `GET /health`
 
 Plain liveness check, `{"status": "ok"}`.
@@ -121,6 +147,8 @@ directly, each piece is added individually.
   the schema is still moving; switch to Alembic once it stabilizes.
 - **No Grafana dashboards committed yet** — `grafana/provisioning/dashboards/` is set up to receive
   dashboard JSON exports once some exist, but none have been built.
-- **The actual floor-plan heatmap web app doesn't exist yet** — Grafana's panels aren't a good fit
-  for that specific visualization (see the iOS repo's README for why); it needs its own small
-  frontend reading from this same Postgres.
+- **The floor-plan map web app now has a skeleton** — it lives in `front/` (Next.js + TypeScript),
+  reads positions from `GET /fixes/recent`, and renders a live 2D map with a moving dot per
+  observer. `docker compose up` builds and serves it on http://localhost:3001. Still a skeleton:
+  no real floor-plan image behind the grid and no occupancy heatmap layer yet. Grafana's panels
+  aren't a good fit for that specific visualization (see the iOS repo's README for why).
