@@ -18,6 +18,11 @@ class Sighting(Base):
     distance_meters: Mapped[float] = mapped_column(Float)
     seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Nullable: optional on the wire too, so older clients and the ESP32 aren't forced to send
+    # them.
+    sample_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rssi_std_dev: Mapped[float | None] = mapped_column(Float, nullable=True)
+    device_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Fix(Base):
@@ -30,3 +35,4 @@ class Fix(Base):
     uncertainty_meters: Mapped[float] = mapped_column(Float)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    anchor_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

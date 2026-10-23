@@ -13,6 +13,12 @@ class SightingIn(BaseModel):
     # (Swift today, Kotlin and ESP32 firmware eventually).
     distanceMeters: float | None = None
     seenAt: datetime
+    # Confidence signals, and the statistical basis an RSSI fingerprint would need later.
+    # Optional so older clients (and the ESP32, which may not batch multiple samples) aren't
+    # forced to send them.
+    sampleCount: int | None = None
+    rssiStdDev: float | None = None
+    deviceModel: str | None = None
 
 
 class FixIn(BaseModel):
@@ -21,3 +27,4 @@ class FixIn(BaseModel):
     y: float
     uncertaintyMeters: float
     recordedAt: datetime
+    anchorCount: int | None = None

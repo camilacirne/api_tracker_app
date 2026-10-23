@@ -32,6 +32,9 @@ def create_sightings(reports: list[SightingIn], db: Session = Depends(get_db)) -
             distance_meters=distance_meters(report.rssi),
             seen_at=report.seenAt,
             received_at=received_at,
+            sample_count=report.sampleCount,
+            rssi_std_dev=report.rssiStdDev,
+            device_model=report.deviceModel,
         )
         for report in reports
     ]
@@ -49,6 +52,7 @@ def create_fix(report: FixIn, db: Session = Depends(get_db)) -> dict[str, int]:
         uncertainty_meters=report.uncertaintyMeters,
         recorded_at=report.recordedAt,
         received_at=datetime.now(timezone.utc),
+        anchor_count=report.anchorCount,
     )
     db.add(row)
     db.commit()

@@ -73,7 +73,52 @@ seen in this area recently") — `/sightings` alone doesn't carry a computed pos
 
 Plain liveness check, `{"status": "ok"}`.
 
-## Deploying to Railway
+## Deploying to Render
+
+Switched from Railway to Render after Railway started showing "Limited Access — Deploys have
+been paused due to an upstream issue" across *all* services in the project at once (including
+ones that had been running fine, and the Postgres instance, which isn't even GitHub-connected) —
+that pattern means it wasn't anything misconfigured on our end, so rather than wait on an
+unexplained outage, we moved. The Railway steps are kept below for reference/rollback, but Render
+is the one actually in use.
+
+Three separate Render services, same shape as before: a managed Postgres, and two Docker-based
+Web Services built from this one repo (API from the root `Dockerfile`, Grafana from
+`grafana/Dockerfile`).
+
+1. **Postgres** — New → PostgreSQL. Render provisions it and shows connection details (host,
+   port, user, password, database name, and a ready-made `Internal Database URL`) on its page
+   once created.
+2. **API** — New → Web Service → connect this repo. Render auto-detects the root `Dockerfile`.
+   Set `DATABASE_URL` to the Postgres service's **Internal Database URL**, with `+psycopg` added
+   to the scheme (same adjustment as Railway — Render's is `postgresql://...`, this code needs
+   `postgresql+psycopg://...`). Render gives the service a public `onrender.com` URL automatically
+   — that's what `PositioningAPIClient.swift` (iOS) should point at.
+3. **Grafana** — New → Web Service → connect this repo *again*. Render builds from a Dockerfile
+   it finds via **Root Directory**/**Dockerfile Path** in the service's settings — point it at
+   `grafana` (exact field layout may differ from what's described here; Render separates "build
+   context directory" from "Dockerfile path" rather than having one combined "Root Directory"
+   like Railway, so this may need adjusting once the actual form is visible). Environment
+   variables, reading the same values off the Postgres service's page as step 2:
+   - `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+   - `POSTGRES_SSLMODE=require`
+   - `GF_SECURITY_ADMIN_USER`/`GF_SECURITY_ADMIN_PASSWORD` — not `admin`/`admin`, this is
+     reachable from the public internet once Render assigns it a domain.
+
+> ✅ **The `$VARIABLE` expansion in `datasource.yml` was confirmed working** — verified on a real
+> deployment (Railway, before the outage): `GET /api/datasources` showed the Postgres datasource
+> provisioned with the env var values correctly substituted, and `GET
+> /api/datasources/uid/.../health` returned `"Database Connection OK"`. This part of the setup is
+> known-good; it doesn't depend on which host runs the containers.
+
+> ⚠️ **Render's free tier has real limits worth knowing before relying on this**: free web
+> services spin down after a period of inactivity and take ~30-60s to wake up on the next
+> request (the API and Grafana will feel "slow" on the first hit after a while); free Postgres
+> instances are deleted after a time limit (historically 30-90 days, but check Render's current
+> terms — this changes). Fine for a class project's testing/demo use, not for anything meant to
+> keep data indefinitely without upgrading.
+
+## Deploying to Railway (previous — kept for reference)
 
 Three separate Railway services in one project — Railway doesn't run `docker-compose.yml`
 directly, each piece is added individually.
@@ -103,20 +148,14 @@ directly, each piece is added individually.
    - Also generate a public domain for this service (Settings → Networking) if you want to open
      dashboards without `docker compose up` running locally.
 
-> ⚠️ **Not verified against a real Grafana instance.** The `$VARIABLE` environment-variable
-> expansion in `datasource.yml` is documented Grafana behavior, but Docker wasn't running while
-> this was written, so it was never actually started and checked. If the datasource doesn't show
-> up provisioned after deploying, check the Grafana container logs first.
-
 ## Known gaps / next steps
 
 - **No auth** on the ingestion endpoints yet — anyone who can reach the API can write rows. Fine
   for local testing, not for anything public — this matters more once it's actually deployed to
   Railway with a real internet-reachable domain.
-- **`baseURL` on the iOS side currently points at a dev-machine LAN IP**
-  (`PositioningAPIClient.swift`) — update it to the Railway-generated API domain once that's
-  deployed; the LAN IP only works while the phone and the Mac running `docker compose` are on the
-  same network.
+- **`baseURL` on the iOS side needs updating once more** (`PositioningAPIClient.swift`) — it was
+  pointed at the Railway domain; once the Render API service has its own `onrender.com` domain,
+  that's what it should point at instead.
 - **No migrations** — tables are created with `Base.metadata.create_all()` on startup. Fine while
   the schema is still moving; switch to Alembic once it stabilizes.
 - **No Grafana dashboards committed yet** — `grafana/provisioning/dashboards/` is set up to receive
