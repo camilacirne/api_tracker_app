@@ -26,6 +26,14 @@ docker compose up --build
 - Grafana: http://localhost:3000 (user `admin` / password `admin`, change it on first login)
 - Postgres: localhost:5432 (user/password/db: `postgres`/`postgres`/`positioning`)
 
+## Authentication
+
+`POST /sightings` and `POST /fixes` require an `X-API-Key` header matching the server's `API_KEY`
+environment variable (no default — the app fails to start if it's not set). `GET /health` stays
+open, since Render's health checks hit it without any header. This is a single shared key, not
+per-client auth — enough to stop randos on the internet from writing to the database, not a real
+auth system.
+
 ## Endpoints
 
 Payload shapes mirror exactly what `PositioningAPIClient.swift` (in the iOS app) encodes — field
@@ -92,8 +100,11 @@ Web Services built from this one repo (API from the root `Dockerfile`, Grafana f
 2. **API** — New → Web Service → connect this repo. Render auto-detects the root `Dockerfile`.
    Set `DATABASE_URL` to the Postgres service's **Internal Database URL**, with `+psycopg` added
    to the scheme (same adjustment as Railway — Render's is `postgresql://...`, this code needs
-   `postgresql+psycopg://...`). Render gives the service a public `onrender.com` URL automatically
-   — that's what `PositioningAPIClient.swift` (iOS) should point at.
+   `postgresql+psycopg://...`). Also set `API_KEY` to the same value `PositioningAPIClient.swift`
+   sends in its `X-API-Key` header — the two have to match exactly, there's no shared secret
+   generation, it's just a string you pick and paste in both places. Render gives the service a
+   public `onrender.com` URL automatically — that's what `PositioningAPIClient.swift` (iOS) should
+   point at.
 3. **Grafana** — New → Web Service → connect this repo *again*. Render builds from a Dockerfile
    it finds via **Root Directory**/**Dockerfile Path** in the service's settings — point it at
    `grafana` (exact field layout may differ from what's described here; Render separates "build
@@ -150,9 +161,10 @@ directly, each piece is added individually.
 
 ## Known gaps / next steps
 
-- **No auth** on the ingestion endpoints yet — anyone who can reach the API can write rows. Fine
-  for local testing, not for anything public — this matters more now that it's deployed with a
-  real internet-reachable domain.
+- **Auth is a single shared API key**, not per-device — fine for a class project (stops random
+  internet traffic, not a motivated attacker who gets the key), but it's not what a real
+  multi-device deployment would use (that'd need per-device keys/tokens, so a leaked or revoked
+  key doesn't affect every phone).
 - **No migrations** — tables are created with `Base.metadata.create_all()` on startup. Fine while
   the schema is still moving; switch to Alembic once it stabilizes.
 - **No Grafana dashboards committed yet** — `grafana/provisioning/dashboards/` is set up to receive
