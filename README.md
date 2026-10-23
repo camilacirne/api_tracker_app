@@ -151,11 +151,8 @@ directly, each piece is added individually.
 ## Known gaps / next steps
 
 - **No auth** on the ingestion endpoints yet — anyone who can reach the API can write rows. Fine
-  for local testing, not for anything public — this matters more once it's actually deployed to
-  Railway with a real internet-reachable domain.
-- **`baseURL` on the iOS side needs updating once more** (`PositioningAPIClient.swift`) — it was
-  pointed at the Railway domain; once the Render API service has its own `onrender.com` domain,
-  that's what it should point at instead.
+  for local testing, not for anything public — this matters more now that it's deployed with a
+  real internet-reachable domain.
 - **No migrations** — tables are created with `Base.metadata.create_all()` on startup. Fine while
   the schema is still moving; switch to Alembic once it stabilizes.
 - **No Grafana dashboards committed yet** — `grafana/provisioning/dashboards/` is set up to receive
